@@ -1,0 +1,78 @@
+name: Release
+
+# v1.2.0-rc.N: build the image once, push it, then point hub staging at it.
+# v1.2.0:      only on a commit that already has a 1.2.0 rc; retag that image (no rebuild)
+#              and open a PR in the hub to point production at it.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/tanatornmokkhao/ff-poc-be
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      stage: ${{ steps.v.outputs.stage }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: v
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then STAGE=staging
+          elif [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then STAGE=prod
+          else echo "Tag $GITHUB_REF_NAME is not vX.Y.Z or vX.Y.Z-rc.N"; exit 1; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Production must come from an rc of the same version
+        if: ${{ steps.v.outputs.stage == 'prod' }}
+        id: rc
+        run: |
+          RC=$(git tag --points-at "$GITHUB_SHA" | grep -E "^v${{ steps.v.outputs.version }}-rc\.[0-9]+$" | sort -V | tail -1)
+          [ -n "$RC" ] || { echo "No v${{ steps.v.outputs.version }}-rc.N on this commit: it never went to staging."; exit 1; }
+          echo "rc=${RC#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push (rc)
+        if: ${{ steps.v.outputs.stage == 'staging' }}
+        run: |
+          docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            -t "$IMAGE:${{ steps.v.outputs.version }}" .
+          docker push "$IMAGE:${{ steps.v.outputs.version }}"
+
+      - name: Retag the rc image (final)
+        if: ${{ steps.v.outputs.stage == 'prod' }}
+        run: docker buildx imagetools create -t "$IMAGE:${{ steps.v.outputs.version }}" "$IMAGE:${{ steps.rc.outputs.rc }}"
+
+      - name: GitHub release
+        run: |
+          FLAG=$([ "${{ steps.v.outputs.stage }}" = staging ] && echo --prerelease || echo --latest)
+          gh release create "$GITHUB_REF_NAME" --generate-notes $FLAG
+
+  hub:
+    needs: release
+    uses: TanatornMokkhao/ff-poc-hub/.github/workflows/promote.yml@main
+    with:
+      app: be
+      version: ${{ needs.release.outputs.version }}
+      stage: ${{ needs.release.outputs.stage }}
+    secrets:
+      DEPLOY_REPO_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}
