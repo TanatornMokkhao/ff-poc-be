@@ -11,10 +11,12 @@ on:
 
 permissions:
   contents: write
-  packages: write
+  id-token: write
 
+# ECR repository and push role come from the hub's Terraform (outputs be_repository_url and
+# be_push_role_arn); the role accepts only tag builds of this repo, through GitHub OIDC.
 env:
-  IMAGE: ghcr.io/tanatornmokkhao/ff-poc-be
+  IMAGE: ${{ vars.ECR_REPOSITORY_URL }}
 
 jobs:
   release:
@@ -47,11 +49,11 @@ jobs:
           echo "from=${PREV#staging/v}" >> "$GITHUB_OUTPUT"
           echo "$GITHUB_REF_NAME: ${PREV:+reuse the image of $PREV}${PREV:-build a new image}"
 
-      - uses: docker/login-action@v3
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          role-to-assume: ${{ vars.AWS_PUSH_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push (first rc of this commit)
         if: ${{ steps.v.outputs.from == '' }}
