@@ -7,6 +7,19 @@ export function handle(req, res) {
   };
   if (req.url === '/health') return send(200, { ok: true });
   if (req.url === '/version') return send(200, { service: 'be', version: version() });
-  if (req.url === '/info') return send(200, { service: 'be', version: version(), uptimeSeconds: Math.round(process.uptime()) });
+  if (req.url === '/info') {
+    // Shows which environment's settings the container got, never the secret values.
+    const stripe = process.env.STRIPE_SECRET_KEY || '';
+    return send(200, {
+      service: 'be',
+      version: version(),
+      env: process.env.APP_ENV || 'local',
+      logLevel: process.env.LOG_LEVEL || 'info',
+      dbHost: process.env.DB_HOST || null,
+      dbPasswordSet: Boolean(process.env.DB_PASSWORD),
+      stripeMode: stripe.startsWith('sk_live_') ? 'live' : stripe.startsWith('sk_test_') ? 'test' : 'none',
+      uptimeSeconds: Math.round(process.uptime()),
+    });
+  }
   return send(404, { error: 'not found' });
 }
