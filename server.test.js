@@ -22,6 +22,9 @@ test('health and version answer', async () => {
     const info = (await get(server, '/info')).body;
     assert.equal(info.service, 'be');
     assert.equal(typeof info.uptimeSeconds, 'number');
+    assert.equal(info.env, 'local');
+    assert.equal(info.dbPasswordSet, false);
+    assert.equal(JSON.stringify(info).includes('password'), false, 'no secret values in /info');
     assert.equal((await get(server, '/nope')).status, 404);
   } finally {
     server.close();
