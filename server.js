@@ -7,5 +7,6 @@ export function handle(req, res) {
   };
   if (req.url === '/health') return send(200, { ok: true });
   if (req.url === '/version') return send(200, { service: 'be', version: version() });
+  if (req.url === '/info') return send(200, { service: 'be', version: version(), uptimeSeconds: Math.round(process.uptime()) });
   return send(404, { error: 'not found' });
 }

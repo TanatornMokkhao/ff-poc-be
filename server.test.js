@@ -19,6 +19,9 @@ test('health and version answer', async () => {
   try {
     assert.deepEqual((await get(server, '/health')).body, { ok: true });
     assert.equal((await get(server, '/version')).body.service, 'be');
+    const info = (await get(server, '/info')).body;
+    assert.equal(info.service, 'be');
+    assert.equal(typeof info.uptimeSeconds, 'number');
     assert.equal((await get(server, '/nope')).status, 404);
   } finally {
     server.close();
