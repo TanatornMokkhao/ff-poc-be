@@ -1,0 +1,26 @@
+name: Notify hub
+
+# When CI passes on main, ask the hub to pin this commit. A commit whose CI failed is never pinned.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::Set the DEPLOY_REPO_TOKEN secret in this repo."; exit 1; }
+          APP="${GITHUB_REPOSITORY##*/ff-poc-}"
+          gh api "repos/${{ github.repository_owner }}/ff-poc-hub/dispatches" \
+            -f event_type=bump -f "client_payload[app]=$APP" -f "client_payload[sha]=$SHA"
+          echo "Asked the hub to pin $APP at ${SHA::7}" >> "$GITHUB_STEP_SUMMARY"
