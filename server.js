@@ -22,5 +22,5 @@ export function handle(req, res) {
       uptimeSeconds: Math.round(process.uptime()),
     });
   }
-  return send(404, { error: 'not found' });
+  return send(404, { error: 'not found', path: req.url });
 }
