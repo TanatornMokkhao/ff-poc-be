@@ -2,9 +2,12 @@
 // them in schema_migrations. There is no down: a rollback runs older code on the newer schema,
 // which is why every migration must work with the release before it (see MIGRATIONS.md).
 //   DATABASE_URL=postgres://… node migrate.js
+// In a deploy it reads its settings from Parameter Store (SSM_PATH) as the server does, and exits 0
+// without touching anything when the stage has no DATABASE_URL.
 import { readdirSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { loadSettings } from './settings.js';
 
 const dir = new URL('./migrations/', import.meta.url);
 
@@ -41,8 +44,23 @@ export async function migrate(client, log = console.log) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await loadSettings();
+  } catch (err) {
+    console.error(`migrate: settings: ${err.message}`);
+    process.exit(1);
+  }
+  if (!process.env.DATABASE_URL) {
+    console.log('no database, migrate skipped');
+    process.exit(0);
+  }
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (err) {
+    console.error(`migrate: cannot connect: ${err.message}`);
+    process.exit(1);
+  }
   try {
     const applied = await migrate(client);
     console.log(applied.length ? `${applied.length} migration(s) applied` : 'schema already current');
