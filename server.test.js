@@ -27,7 +27,7 @@ test('health and version answer', async () => {
     assert.equal(info.env, 'local');
     assert.equal(info.dbPasswordSet, false);
     assert.equal(JSON.stringify(info).includes('password'), false, 'no secret values in /info');
-    assert.equal((await get(server, '/nope')).status, 404);
+    assert.deepEqual(await get(server, '/nope'), { status: 404, body: { error: 'not found', path: '/nope' } });
     if (!process.env.DATABASE_URL) assert.equal((await get(server, '/notes')).status, 503);
   } finally {
     server.close();

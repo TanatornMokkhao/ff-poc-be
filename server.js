@@ -32,5 +32,5 @@ export function handle(req, res) {
     });
   }
   if (req.url === '/notes') return notes(req, send);
-  return send(404, { error: 'not found' });
+  return send(404, { error: 'not found', path: req.url });
 }
