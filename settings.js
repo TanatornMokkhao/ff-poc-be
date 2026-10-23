@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { SSMClient, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
 
-// Keys the server needs: every key in .env.example.
+// Keys the server needs: every key in .env.example, except lines marked "optional".
 export function requiredKeys(example) {
   return example
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#'))
+    .filter((l) => l && !l.startsWith('#') && !/#[^=]*\boptional\s*$/.test(l))
     .map((l) => l.slice(0, l.indexOf('=')));
 }
 

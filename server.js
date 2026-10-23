@@ -1,3 +1,5 @@
+import { notes } from './notes.js';
+
 const version = () => process.env.APP_VERSION || 'dev';
 
 export function handle(req, res) {
@@ -28,5 +30,6 @@ export function handle(req, res) {
       uptimeSeconds: Math.round(process.uptime()),
     });
   }
+  if (req.url === '/notes') return notes(req, send);
   return send(404, { error: 'not found' });
 }
