@@ -59,6 +59,7 @@ jobs:
         if: ${{ steps.v.outputs.from == '' }}
         run: |
           docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --build-arg GIT_SHA="$GITHUB_SHA" --build-arg BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -t "$IMAGE:${{ steps.v.outputs.version }}" .
           docker push "$IMAGE:${{ steps.v.outputs.version }}"
 
