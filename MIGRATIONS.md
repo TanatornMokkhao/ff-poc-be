@@ -41,6 +41,10 @@ DATABASE_URL=postgres://… node migrate.js
 ```
 
 Each file runs once, in its own transaction, and is recorded in `schema_migrations`.
-Today no stage has a database: `DATABASE_URL` is optional and `/notes` answers 503 without it.
-The deploy step that runs migrations (its own role and database user, before the new code starts)
-comes with ECS and RDS.
+In a deploy, the hub's `deploy.sh` runs `node migrate.js` from the new image before it starts the
+new code: staging at the rc, prod after the production approval. `migrate.js` reads its settings
+from Parameter Store like the server. A failure stops the deploy and the running be stays as it is.
+
+Today no stage has a database: `DATABASE_URL` is optional, migrate prints
+`no database, migrate skipped`, and `/notes` answers 503. A separate database user for migrations
+(and `aws ecs run-task` in place of `docker run`) comes with ECS and RDS.

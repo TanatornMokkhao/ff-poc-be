@@ -26,6 +26,16 @@ jobs:
           for i in $(seq 20); do curl -fs localhost:3000/health && break; sleep 1; done
           curl -fs localhost:3000/health
           docker exec be-check ls migrations
+      # The two commands the hub's deploy.sh runs before it starts a new be.
+      - name: The image migrates the way the deploy runs it
+        run: |
+          docker run --rm --entrypoint test be-check -f migrate.js
+          docker run --rm be-check node migrate.js | tee skip.log
+          grep -qx 'no database, migrate skipped' skip.log
+          if docker run --rm -e DATABASE_URL=postgres://ci:ci@127.0.0.1:1/none be-check node migrate.js; then
+            echo "::error::migrate exited 0 with an unreachable database; the deploy would not stop"; exit 1
+          fi
+          echo "An unreachable database exits non-zero: the deploy stops."
 
   # Expand / contract (MIGRATIONS.md): the rules hold, the migrations apply on top of the last
   # release's schema, and the last release still runs on the result, because a rollback does that.
