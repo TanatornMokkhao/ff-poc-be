@@ -2,7 +2,8 @@ const version = () => process.env.APP_VERSION || 'dev';
 
 export function handle(req, res) {
   const send = (status, body) => {
-    res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
+    // Answers describe the running server, so a cached copy is always stale.
+    res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
     res.end(JSON.stringify(body));
   };
   if (req.url === '/health') return send(200, { ok: true });
