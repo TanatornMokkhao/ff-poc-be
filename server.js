@@ -6,7 +6,14 @@ export function handle(req, res) {
     res.end(JSON.stringify(body));
   };
   if (req.url === '/health') return send(200, { ok: true });
-  if (req.url === '/version') return send(200, { service: 'be', version: version() });
+  if (req.url === '/version') {
+    return send(200, {
+      service: 'be',
+      version: version(),
+      commit: process.env.GIT_SHA || 'unknown',
+      builtAt: process.env.BUILT_AT || 'unknown',
+    });
+  }
   if (req.url === '/info') {
     // Shows which environment's settings the container got, never the secret values.
     const stripe = process.env.STRIPE_SECRET_KEY || '';
