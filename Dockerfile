@@ -2,7 +2,9 @@ FROM node:22-alpine
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
-COPY server.js settings.js index.js .env.example ./
+COPY server.js settings.js notes.js index.js migrate.js .env.example ./
+# Migrations ship in the image, so the deploy can run `node migrate.js` from the image it deploys.
+COPY migrations ./migrations
 # The commit is baked in, so the image always knows what code it holds. The version is set by the
 # hub at deploy time, since one image serves an rc and its prod release.
 # SSM_PATH names the Parameter Store path the server reads its settings from at boot.

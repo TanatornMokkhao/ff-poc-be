@@ -5,7 +5,7 @@ import { loadSettings, missingKeys, requiredKeys } from './settings.js';
 const fakeClient = (pages) => ({ send: async () => pages.shift() });
 
 test('requiredKeys reads key names and skips comments', () => {
-  assert.deepEqual(requiredKeys('# c\nA=1\n\nB= # secret\n'), ['A', 'B']);
+  assert.deepEqual(requiredKeys('# c\nA=1\n\nB= # secret\nC= # secret optional\n'), ['A', 'B']);
 });
 
 test('missingKeys names keys without a value', () => {
